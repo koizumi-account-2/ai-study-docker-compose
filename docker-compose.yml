@@ -1,0 +1,56 @@
+# docker-compose.yml
+version: "3.8"
+
+services:
+  front:
+    image: ${ECR_REGISTRY}/front-agent-test:latest
+    container_name: front-agent-test
+    ports:
+      - "3000:80"
+    restart: always
+    depends_on:
+      - spring
+
+  spring:
+    image: ${ECR_REGISTRY}/agent-spring:latest
+    container_name: server-agent-test
+    ports:
+      - "8080:8080"
+    environment:
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      ALLOW_ORIGIN: http://localhost:3000
+      ENCRYPT_KEY: ${ENCRYPTION_KEY}
+      SPRING_PROFILES_ACTIVE: test
+    depends_on:
+      - postgres
+  fastapi:
+    image: ${ECR_REGISTRY}/fastapi-agent:latest
+    container_name: fastapi-agent-test
+    ports:
+      - "8000:8000"
+    environment:
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      OPEN_API_KEY: ${OPEN_API_KEY}
+    depends_on:
+      - postgres
+  postgres:
+    image: postgres:15
+    container_name: local-postgres
+    ports:
+      - "${DB_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  pgdata:
